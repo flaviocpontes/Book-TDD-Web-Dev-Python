@@ -17,30 +17,33 @@ jobs:
       matrix:
         test_chapter: [
           test_chapter_01,
-          test_chapter_02_unittest,
-          test_chapter_03_unit_test_first_view,
-          test_chapter_04_philosophy_and_refactoring,
-          test_chapter_05_post_and_database,
-          test_chapter_06_explicit_waits_1,
-          test_chapter_07_working_incrementally,
-          test_chapter_08_prettification,
-          test_chapter_09_docker,
-          test_chapter_10_production_readiness,
-          test_chapter_11_server_prep,
-          test_chapter_12_ansible,
-          test_chapter_13_organising_test_files,
-          test_chapter_14_database_layer_validation,
-          test_chapter_15_simple_form,
-          test_chapter_16_advanced_forms,
-          test_chapter_17_javascript,
-          test_chapter_19_spiking_custom_auth,
-          test_chapter_20_mocking_1,
-          test_chapter_21_mocking_2,
-          test_chapter_22_fixtures_and_wait_decorator,
-          test_chapter_23_debugging_prod,
-          test_chapter_24_outside_in,
-          test_chapter_25_CI,
-          test_chapter_26_page_pattern,
+          # Chapters are re-enabled here as they are ported to uv/Quart: the
+          # Django-era chapter tests start from the old chapter_01 snapshot,
+          # which no longer exists.
+          # test_chapter_02_unittest,
+          # test_chapter_03_unit_test_first_view,
+          # test_chapter_04_philosophy_and_refactoring,
+          # test_chapter_05_post_and_database,
+          # test_chapter_06_explicit_waits_1,
+          # test_chapter_07_working_incrementally,
+          # test_chapter_08_prettification,
+          # test_chapter_09_docker,
+          # test_chapter_10_production_readiness,
+          # test_chapter_11_server_prep,
+          # test_chapter_12_ansible,
+          # test_chapter_13_organising_test_files,
+          # test_chapter_14_database_layer_validation,
+          # test_chapter_15_simple_form,
+          # test_chapter_16_advanced_forms,
+          # test_chapter_17_javascript,
+          # test_chapter_19_spiking_custom_auth,
+          # test_chapter_20_mocking_1,
+          # test_chapter_21_mocking_2,
+          # test_chapter_22_fixtures_and_wait_decorator,
+          # test_chapter_23_debugging_prod,
+          # test_chapter_24_outside_in,
+          # test_chapter_25_CI,
+          # test_chapter_26_page_pattern,
         ]
 
     env:
@@ -105,6 +108,13 @@ jobs:
           dpkg -L firefox-esr
           firefox --version
           which geckodriver && geckodriver --version || exit 0
+
+      - name: Install Chromium system dependencies (uv/Quart chapters)
+        if: matrix.test_chapter == 'test_chapter_01'
+        shell: bash
+        run: |
+          # the chapter test itself runs `uv run playwright install chromium`
+          uvx playwright install-deps chromium
 
       - name: Run chapter test
         shell: bash

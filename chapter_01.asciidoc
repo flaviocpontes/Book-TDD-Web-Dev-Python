@@ -1,5 +1,5 @@
 [[chapter_01]]
-== Getting Django Set Up Using a [keep-together]#Functional Test#
+== Getting Quart Set Up Using a [keep-together]#Functional Test#
 
 Test-driven development isn't something that comes naturally.
 It's a discipline, like a martial art, and just like in a Kung Fu movie,
@@ -44,34 +44,91 @@ image::images/tdd3_0101.png["A picture of a goat up a tree", scale="50"]
 
 
 We'll proceed with nice small steps;
-we're going to use _Django_, which is a popular Python web framework, to build our app.
+we're going to use _Quart_, which is a popular Python web framework, to build our app.
+Quart is the async cousin of Flask, so it will feel familiar if you've seen either of them.
 
 
-((("Django framework", "set up", id="DJFsetup01")))
-The first thing we want to do is check that we've got Django installed
+((("Quart framework", "set up", id="QTsetup01")))
+The first thing we want to do is check that we've got Quart installed
 and that it's ready for us to work with.
-The _way_ we'll check is by confirming that we can spin up Django's development server
-and actually see it serving up a web page, in our web browser, on our local computer.
-We'll use the _Selenium_ browser automation tool for this.((("Selenium")))
+The _way_ we'll check is by confirming that we can spin up a web server
+and actually see it serving up a web page, in a web browser, on our local computer.
+We'll use the _Playwright_ browser automation tool for this.((("Playwright")))
+
+But before we can write even one test, we need somewhere to put it.
+So, a quick bit of setup.
+We'll do all of our Python project management with _uv_,
+which you installed in &#x201c;<<pre-requisites>>&#x201d;.
+Let's ask it to create a new project for us, called _superlists_,
+and then step inside:
+
+[subs="specialcharacters,quotes"]
+----
+$ *uv init --lib --python 3.14 superlists*
+$ *cd superlists*
+----
+
+((("uv", "creating a project")))
+That makes a folder with a few files inside it.
+The ones to notice are _pyproject.toml_, which describes our project,
+and _src/superlists/_, which is where our application code is going to live:
+
+[role="skipme"]
+----
+superlists
+├── .gitignore
+├── .python-version
+├── README.md
+├── pyproject.toml
+└── src
+    └── superlists
+        ├── __init__.py
+        └── py.typed
+----
+
+NOTE: There's no virtual environment for you to create or activate.
+    uv will make and manage one for us, in a _.venv_ folder, the first time we need it,
+    and whenever we use `uv run` to run something, it runs inside that environment.
+
+Now let's add the things we know we're going to need:
+Quart itself, and Hypercorn, which is the server we'll use to run it.
+Then, for testing, we want _pytest_, and its Playwright plugin,
+which will let us drive a real browser from our tests:
+
+[subs="specialcharacters,quotes"]
+----
+$ *uv add quart hypercorn*
+$ *uv add --dev pytest pytest-playwright*
+----
+
+Finally, Playwright needs to download the browser it will control.
+We'll use Chromium. It's a biggish download, so it may take a minute:
+
+[subs="specialcharacters,quotes"]
+----
+$ *uv run playwright install chromium*
+----
 
 [[first-FT]]
 ((("functional tests (FTs)", "creating")))
-Create a new Python file called _functional_tests.py_
-wherever you want to keep the code for your project, and enter the following code.
+Now we can write our first test.
+Create a new file called _tests/functional/test_first_visit.py_,
+(you'll need to make the folders too),
+and enter the following code.
 If you feel like making a few little goat noises as you do it, it may help:
 
 [role="sourcecode"]
-.functional_tests.py
+.tests/functional/test_first_visit.py
 ====
 [source,python]
 ----
-from selenium import webdriver
+from playwright.sync_api import Page
 
-browser = webdriver.Firefox()
-browser.get("http://localhost:8000")
 
-assert "Congratulations!" in browser.title
-print("OK")
+def test_can_visit_the_site(page: Page):
+    page.goto("http://localhost:8000")
+
+    assert "To-Do" in page.title()
 ----
 ====
 
@@ -80,81 +137,45 @@ I'll talk more about what I mean by functional tests,
 and how they contrast with unit tests, in a bit.
 For now, it's enough to assure ourselves that we understand what it's doing:
 
-- Starting a Selenium WebDriver to pop up a real Firefox browser window.((("Selenium WebDriver")))((("Firefox")))
+- It's a plain pytest test function, and pytest-playwright hands it a `page`,
+  which is a tab in a real Chromium browser.((("Playwright", "page fixture")))((("Chromium")))
 
-- Using it to open up a web page, which we're expecting to be served from the local computer.
+- It uses the page to open up a web page, which we're expecting to be served from the local computer.
 
-- Checking (making a test assertion) that the page has the word "Congratulations!" in its title.
+- It checks (makes a test assertion) that the page has the word "To-Do" in its title.
 
-- If all goes well, we print OK.
+- If the assertion fails, pytest tells us. If all goes well, the test passes.
 
 Let's try running it:
 
-
-[subs="specialcharacters,macros"]
+[subs="specialcharacters,quotes"]
 ----
-$ pass:quotes[*python functional_tests.py*]
-Traceback (most recent call last):
-  File "...goat-book/functional_tests.py", line 4, in <module>
-    browser.get("http://localhost:8000")
-  File ".../selenium/webdriver/remote/webdriver.py", line 483, in get
-    self.execute(Command.GET, {"url": url})
-  File ".../selenium/webdriver/remote/webdriver.py", line 458, in execute
-    self.error_handler.check_response(response)
-  File ".../selenium/webdriver/remote/errorhandler.py", line 232, in
-check_response
-    raise exception_class(message, screen, stacktrace)
-selenium.common.exceptions.WebDriverException: Message: Reached error page: abo
-ut:neterror?e=connectionFailure&u=http%3A//localhost%3A8000/[...]
-Stacktrace:
-RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
-WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:182:5
-UnknownError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:530:5
+$ *uv run pytest tests/functional*
 [...]
+tests/functional/test_first_visit.py F                                   [100%]
+[...]
+E           playwright._impl._errors.Error: Page.goto:
+net::ERR_CONNECTION_REFUSED at http://localhost:8000/
+[...]
+FAILED tests/functional/test_first_visit.py::test_can_visit_the_site[chromium]
+[...] 1 failed in 1.66s [...]
 ----
 
 [role="pagebreak-before"]
-You should see a browser window pop up trying to open _localhost:8000_,
-showing the "Unable to connect" error page.
-If you switch back to your console,
-you'll see the big, ugly error message
-telling us that Selenium ran into an error page.
-And then, you will probably be irritated
-at the fact that it left the Firefox window lying around your desktop for you to tidy up.
-We'll fix that later!
+That's a lot of output for one little failure, but you only need to look for
+the line that starts with an `E`, for "error".
+It says `net::ERR_CONNECTION_REFUSED`,
+which is Chromium's way of telling us that it went to _localhost:8000_,
+knocked on the door, and nobody was home.
+It ran headless, so you won't have seen a browser window pop up.
+That's what we want for now;
+if you're curious, adding `--headed` to the pytest command will show you the browser at work.
 
-NOTE: If, instead, you see an error trying to import Selenium, or an error
-    trying to find something called "geckodriver", you might need
-    to go back and have another look at the &#x201c;<<pre-requisites>>&#x201d;.
-
-[[firefox_upgrade_popup_aside]]
-.What to Do If You Get a Firefox Upgrade Pop-up
-*******************************************************************************
-((("Selenium", "upgrading")))
-((("geckodriver", "upgrading")))
-((("Firefox", "upgrading")))
-((("functional tests (FTs)", "troubleshooting hung tests")))
-((("troubleshooting", "hung functional tests")))
-Now and again, when running Selenium tests,
-you might encounter a strange pop-up window, such as the one shown in <<firefox_upgrade_popup>>.
-
-[[firefox_upgrade_popup]]
-.Firefox wants to install a new what now?
-image::images/tdd3_0102.png["A pop-up window saying 'Firefox is trying to install a new helper tool.' and prompting for a username and password"]
-
-This happens when Firefox has automatically downloaded a new version,
-in the background.
-When Selenium tries to load a fresh Firefox session,
-it wants to install the latest version of its "geckodriver" plugin.
-
-To resolve the issue, you have to close the Selenium browser window,
-go back to your main browser window
-and tell it to install the upgrade and restart itself,
-and then try again.
-
-NOTE: If something strange is going on with your FTs,
-    it's worth checking if there's a Firefox upgrade pending.
-*******************************************************************************
+NOTE: If, instead, you see an error trying to import `playwright`,
+    or one telling you that the browser executable doesn't exist,
+    you might need to go back and have another look
+    at the &#x201c;<<pre-requisites>>&#x201d;,
+    or re-run the `playwright install` command.
 
 
 For now though, we have a _failing test_,
@@ -163,111 +184,84 @@ so that means we're allowed to start building our app.
 
 
 
-=== Getting Django Up and Running
+=== Getting Quart Up and Running
 
-((("Django framework", "set up", "project creation")))
-As you've definitely read &#x201c;<<pre-requisites>>&#x201d; by now,
-you've already got Django installed (right?).
-The first step in getting Django up and running is to create a _project_,
-which will be the main container for our site.
-Django provides a little command-line tool for this:
+((("Quart framework", "set up", "app creation")))
+Unlike some bigger frameworks, Quart doesn't have a big command-line tool
+that generates a project full of files for us.
+A Quart app can be as small as a single file with a single function in it.
+That's all we need to get our test passing, so that's what we'll write.
+Open up _src/superlists/\__init__.py_,
+which uv created for us, and replace its contents entirely:
+
+[role="sourcecode"]
+.src/superlists/+++__init__+++.py
+====
+[source,python]
+----
+from quart import Quart
+
+app = Quart(__name__)
+
+
+@app.get("/")
+async def home_page():
+    return "<html><title>To-Do lists</title><h1>To-Do</h1></html>"
+----
+====
+
+That creates an `app`, and tells it that when someone asks for the home page, _/_,
+it should respond with a tiny bit of HTML containing our title.
+If the `async def` is new to you, don't panic.
+It just says that this function can be paused while it waits for things like
+network or database access, so that the server can get on with other requests in the meantime.
+We won't need to think about it much for a while.
+
+((("development server", "running with Hypercorn")))
+((("Hypercorn")))
+To actually serve the app, we use Hypercorn.
+The argument says "in the package called `superlists`, find the thing called `app`":
 
 [subs="specialcharacters,quotes"]
 ----
-$ *django-admin startproject superlists .*
-----
-//002
-
-Don't forget that "." at the end; it's important!
-
-((("superlists folder")))
-That will create a file called _manage.py_ in((("manage.py file"))) your current folder,
-and a subfolder called “_superlists_”, with more stuff inside it:
-
-----
-.
-├── functional_tests.py
-├── manage.py
-└── superlists
-    ├── __init__.py
-    ├── asgi.py
-    ├── settings.py
-    ├── urls.py
-    └── wsgi.py
+$ *uv run hypercorn superlists:app*
+[...] [INFO] Running on http://127.0.0.1:8000 (CTRL + C to quit)
 ----
 
-NOTE: Make sure your project folder looks exactly like this!
-    If you see two nested folders called "superlists",
-    it's because you forgot the "." in the command.
-    Delete them and try again,
-    or there will be lots of confusion
-    with paths and working directories.
+That's our web server up and running on our machine.
 
-The _superlists_ folder is intended for stuff that applies to the whole project--like _settings.py_, which is used to store global configuration information for the site.
+Leave it there and open another command shell.  Navigate to your project
+folder, and then try running our test again:
 
-[role="pagebreak-before"]
-But the main thing to notice is _manage.py_.
-That's Django's Swiss Army knife,
-and one of the things it can do is run((("development server", "running with manage.py")))((("manage.py file", "running a development server"))) a development server.
-Let's try that now:
-
-[subs="specialcharacters,macros"]
+[subs="specialcharacters,quotes"]
 ----
-$ pass:quotes[*python manage.py runserver*]
-Watching for file changes with StatReloader
-Performing system checks...
-
-System check identified no issues (0 silenced).
-
-You have 18 unapplied migration(s). Your project may not work properly until
-you apply the migrations for app(s): admin, auth, contenttypes, sessions.
-Run 'python manage.py migrate' to apply them.
-March 17, 2023 - 18:07:30
-Django version 5.2.4, using settings 'superlists.settings'
-Starting development server at http://127.0.0.1:8000/
-Quit the server with CONTROL-C.
-----
-
-// IDEA: get this under test
-
-That's Django's development server now up and running on our machine.
-
-NOTE: It's safe to ignore that message about "unapplied migrations" for now.
-    We'll look at migrations in <<chapter_05_post_and_database>>.
-
-Leave it there and open((("virtualenv (virtual environment)", "activating and using in functional test"))) another command shell.  Navigate to your project
-folder, activate your virtualenv, and then try running our test again:
-
-[subs="specialcharacters,macros"]
-----
-$ pass:quotes[*python functional_tests.py*]
-OK
+$ *uv run pytest tests/functional*
+[...]
+tests/functional/test_first_visit.py .                                   [100%]
+[...]
+[...] 1 passed in 0.75s [...]
 ----
 
 Not much action on the command line, but you should notice two things: firstly,
-there was no ugly `AssertionError` and, secondly, the Firefox window that
-Selenium popped up had a different-looking page on it.((("AssertionError")))
+there was no ugly `E` error and, secondly, the `F` has turned into a `.`,
+and pytest tells us `1 passed`.((("AssertionError")))
 
-
-TIP: If you see an error saying "ModuleNotFoundError: No module named selenium",
-    you've forgotten to activate your virtualenv.
-    Check the &#x201c;<<pre-requisites>>&#x201d; section again, if you need to.
+TIP: If you see `ERR_CONNECTION_REFUSED` again, check that the server is still running
+    in the other shell, and that it says it's listening on port 8000.
+    If something else on your computer is already using that port,
+    Hypercorn will refuse to start, and tell you so.
 
 Well, it may not look like much, but that was our first ever passing test!
 Hooray!
 
 
 If it all feels a bit too much like magic, like it wasn't quite real,
-why not go and take a look at the dev server manually,
+why not go and take a look at the server manually,
 by opening a web browser yourself and visiting pass:[<em>http://localhost:8000</em>]?
-You should see something like <<installed_successfully_screenshot>>.
+You should see a very plain page, with the word "To-Do" on it, in big letters.
 
-You can quit the development server now if you like,
+You can quit the server now if you like,
 back in the original shell, using Ctrl+C.
-
-[[installed_successfully_screenshot]]
-.It worked!
-image::images/tdd3_0103.png["Screenshot of Django Installed Successfully Screen"]
 
 
 .Adieu to Roman Numerals!
@@ -307,17 +301,17 @@ revert changes, explore new ideas safely, even just as a backup...It's hard to o
 TDD goes hand in hand with version control,
 so I want to make sure I impart how it fits into the workflow.
 
-.Our Working Directory Is Always the Folder That Contains manage.py
+.Our Working Directory Is Always the Folder That Contains pyproject.toml
 ******************************************************************************
 We'll be using this same folder throughout the book
-as our working directory--if in doubt, it's((("manage.py file", "working directory containing"))) the one that contains _manage.py_.
+as our working directory--if in doubt, it's((("pyproject.toml file", "working directory containing"))) the one that contains _pyproject.toml_.
 
 (For simplicity, in my command listings, I'll always show it as: _...goat-book/_. Although it will probably actually be something like:
-_/home/kind-reader-username/my-python-projects/goat-book/_.)
+_/home/kind-reader-username/my-python-projects/superlists/_.)
 
 Whenever I show a command to type in, I will assume we're in this directory.
 Similarly, if I mention a path to a file, it will be relative to this directory.
-So, for example, _superlists/settings.py_ means the _settings.py_ inside the _superlists_ folder.
+So, for example, _src/superlists/\__init__.py_ means the _\__init__.py_ inside the _src/superlists_ folder.
 
 ******************************************************************************
 
@@ -326,78 +320,31 @@ So, our first commit!
 If anything, it's a bit late; shame on us.
 We're using _Git_ as our VCS, ’cos it's the best.
 
-Let's start by doing the `git init` to start the repository:
+Good news: we don't have to do the `git init`.
+When uv created our project, it noticed we weren't inside a repository already,
+and started one for us.
+It also wrote us a _.gitignore_ file, which, um, tells Git what to ignore.((("Git", "commits")))((("default branch name in Git")))((("Git", "default branch name, choosing")))(((".gitignore file", primary-sortas="gitignore")))
+Let's take a look at it:
 
-[subs="specialcharacters,quotes"]
-----
-$ *ls*
-db.sqlite3  functional_tests.py  manage.py  superlists
-
-$ *git init .*
-Initialised empty Git repository in ...goat-book/.git/
-----
-
-[role="pagebreak-before less_space"]
-.Setting the Default Branch Name in Git
-*******************************************************************************
-
-If you see this message:
-
-[role="skipme small-code"]
 [subs="specialcharacters,macros"]
 ----
-hint: Using 'master' as the name for the initial branch. This default branch
-hint: name is subject to change. To configure the initial branch name to use
-hint: in all of your new repositories, which will suppress this warning, call:
-hint:
-hint: 	git config --global init.defaultBranch <name>
-hint:
-hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
-hint: 'development'. The just-created branch can be renamed via this command:
-hint:
-hint: 	git branch -m <name>
-Initialised empty Git repository in ...goat-book/.git/
+$ pass:quotes[*cat .gitignore*]
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
 ----
 
-Consider following the advice and choosing an explicit default branch name.((("default branch name in Git")))((("Git", "default branch name, choosing")))
-I chose `main`. It's a popular choice, and you might see it here and there in the book.
-So if you want to match that, do:
-
-[role="skipme"]
-[subs="specialcharacters,quotes"]
-----
-$ *git config --global init.defaultBranch main*
-# then let's re-create our git repo by deleting and starting again:
-$ *rm -rf .git*
-$ *git init .*
-Initialised empty Git repository in ...goat-book/.git/
-----
-
-*******************************************************************************
-
-
-
-((("Git", "commits")))
-Now let's take a look and see what files we want to commit:
-
-[subs="specialcharacters,quotes"]
-----
-$ *ls*
-db.sqlite3 functional_tests.py manage.py superlists
-----
-
-There are a few things in here that we _don't_ want under version control:
-_db.sqlite3_ is the database file, and our virtualenv shouldn't be in Git either.
-We'll add all of (((".gitignore file", primary-sortas="gitignore")))them to a special file called _.gitignore_ which, um, tells Git what to ignore:
-
-[subs="specialcharacters,quotes"]
-----
-$ *echo "db.sqlite3" >> .gitignore*
-$ *echo ".venv" >> .gitignore*
-----
-
-[role="pagebreak-before"]
-Next we can add the rest of the contents of the current "." folder:
+Our virtual environment and all those `__pycache__` folders are on the list,
+so they won't end up in version control.
+That's one fewer thing to think about.
+Let's add everything else and see where we are:
 
 [subs="specialcharacters,macros"]
 ----
@@ -411,65 +358,35 @@ Changes to be committed:
   (use "git rm --cached <file>..." to unstage)
 
         new file:   .gitignore
-        new file:   functional_tests.py
-        new file:   manage.py
-        new file:   superlists/__init__.py
-        new file:   superlists/__pycache__/__init__.cpython-314.pyc
-        new file:   superlists/__pycache__/settings.cpython-314.pyc
-        new file:   superlists/__pycache__/urls.cpython-314.pyc
-        new file:   superlists/__pycache__/wsgi.cpython-314.pyc
-        new file:   superlists/asgi.py
-        new file:   superlists/settings.py
-        new file:   superlists/urls.py
-        new file:   superlists/wsgi.py
+        new file:   .python-version
+        new file:   README.md
+        new file:   pyproject.toml
+        new file:   src/superlists/__init__.py
+        new file:   src/superlists/py.typed
+        new file:   tests/functional/test_first_visit.py
+        new file:   uv.lock
 ----
 
-Oops!  We've got a bunch of '.pyc' files in there;
-it's pointless to commit those.
-Let's remove them from Git and add them to '.gitignore' too:
+[role="pagebreak-before less_space"]
+.Setting the Default Branch Name in Git
+*******************************************************************************
 
+If your `git status` says `On branch master` rather than `main`,
+that's just Git's old default branch name.
+((("default branch name in Git")))
+I chose `main`, it's a popular choice, and you might see it here and there in the book.
+So if you want to match that, do:
 
-[subs="specialcharacters,macros"]
+[role="skipme"]
+[subs="specialcharacters,quotes"]
 ----
-$ pass:[<strong>git rm -r --cached superlists/__pycache__</strong>]
-rm 'superlists/__pycache__/__init__.cpython-314.pyc'
-rm 'superlists/__pycache__/settings.cpython-314.pyc'
-rm 'superlists/__pycache__/urls.cpython-314.pyc'
-rm 'superlists/__pycache__/wsgi.cpython-314.pyc'
-$ pass:[<strong>echo "__pycache__" >> .gitignore</strong>]
-$ pass:[<strong>echo "*.pyc" >> .gitignore</strong>]
-----
-
-[role="pagebreak-before"]
-Now let's see where we are...
-
-
-[subs="specialcharacters,macros"]
-----
-$ pass:[<strong>git status</strong>]
-On branch main
-
-Initial commit
-
-Changes to be committed:
-  (use "git rm --cached <file>..." to unstage)
-
-        new file:   .gitignore
-        new file:   functional_tests.py
-        new file:   manage.py
-        new file:   superlists/__init__.py
-        new file:   superlists/asgi.py
-        new file:   superlists/settings.py
-        new file:   superlists/urls.py
-        new file:   superlists/wsgi.py
-
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git restore <file>..." to discard changes in working directory)
-
-        modified:   .gitignore
+$ *git branch -m main*
+$ *git config --global init.defaultBranch main*
 ----
 
+The second command makes all your future repositories start out that way.
+
+*******************************************************************************
 
 TIP: You'll see I'm using `git status` a lot--so much so that
     I often alias it to `git st`...I'm not telling you how to do that though;
@@ -480,7 +397,6 @@ Looking good--we're ready to do our first commit!
 
 [subs="specialcharacters,quotes"]
 ----
-$ *git add .gitignore*
 $ *git commit*
 ----
 
@@ -507,8 +423,8 @@ NOTE: If you want to really go to town on Git,
     Alternatively, you can wait until <<chapter_25_CI>>, where we'll use one.
 
 That's it for the VCS lecture. Congratulations!
-You've written a functional test using Selenium,
-and you've gotten Django installed and running,
+You've written a functional test using Playwright,
+and you've gotten Quart installed and running,
 in a certifiable, test-first, goat-approved TDD way.
 Give yourself a well-deserved pat on the back
-before moving on to <<chapter_02_unittest>>.((("", startref="DJFsetup01")))
+before moving on to <<chapter_02_unittest>>.((("", startref="QTsetup01")))

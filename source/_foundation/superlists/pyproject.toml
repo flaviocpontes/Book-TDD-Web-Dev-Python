@@ -1,0 +1,34 @@
+[project]
+name = "superlists"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Flavio Pontes", email = "flaviocpontes@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "hypercorn>=0.18.0",
+    "quart>=0.23.1",
+    "sqlalchemy>=2.1.3",
+]
+
+[project.scripts]
+superlists = "superlists:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-playwright>=0.9.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# unit and functional tests must run in separate pytest processes (see design.md)
+testpaths = ["tests/unit"]

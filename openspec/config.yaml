@@ -1,0 +1,42 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  This repository is an adaptation of "Test-Driven Development with Python"
+  (3rd edition, by Harry Percival), being ported chapter by chapter from
+  Django/Selenium to a modern stack. The maintainer has the author's permission.
+  Book text is AsciiDoc at the repo root (chapter_NN_*.asciidoc).
+  Target stack: Python 3.14, Quart, SQLAlchemy 2 (async, SQLite), Hypercorn,
+  Playwright, uv, pytest + pytest-asyncio + pytest-playwright.
+  Backend setup is done ENTIRELY with uv (uv init / add / run); no pip or venv.
+  Front end: Jinja templates, HTMX, Bootstrap 5.3 vendored; no Node on the main path.
+  Chapter snapshots are plain directories at source/chapter_NN_*/ (no submodules).
+  Each chapter has a tests/test_chapter_NN_*.py that replays its listings,
+  as a subclass of UvChapterTest (tests/uv_chapter_test.py). Do not edit the
+  Django-era ChapterTest: the unported chapters still use it.
+  Default functional-test browser is Chromium. Inside a snapshot, unit tests
+  (tests/unit, async) and functional tests (tests/functional, sync Playwright)
+  run as SEPARATE pytest invocations; they cannot share one process.
+  Never run `uv init` inside this repo without --no-workspace: the old root
+  pyproject.toml would adopt the new project as a workspace member.
+  Work happens one chapter at a time; the maintainer reads and runs each chapter
+  before the next begins. Keep the original author's voice and chapter structure.
+
+# Per-artifact rules (optional)
+rules:
+  tasks:
+    - Every chapter port must include tasks to run the chapter's code for real, update its test and snapshot, and build its HTML
+    - A chapter is not done until its test is green and the maintainer has approved it
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
