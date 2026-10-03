@@ -1,6 +1,3 @@
-[submodule "source/chapter_01/superlists"]
-	path = source/chapter_01/superlists
-	url = git@github.com:hjwp/book-example.git
 [submodule "source/chapter_02/superlists"]
 	path = source/chapter_02_unittest/superlists
 	url = git@github.com:hjwp/book-example.git

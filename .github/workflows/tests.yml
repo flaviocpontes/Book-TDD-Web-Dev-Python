@@ -106,6 +106,13 @@ jobs:
           firefox --version
           which geckodriver && geckodriver --version || exit 0
 
+      - name: Install Chromium system dependencies (uv/Quart chapters)
+        if: matrix.test_chapter == 'test_chapter_01'
+        shell: bash
+        run: |
+          # the chapter test itself runs `uv run playwright install chromium`
+          uvx playwright install-deps chromium
+
       - name: Run chapter test
         shell: bash
         run: |

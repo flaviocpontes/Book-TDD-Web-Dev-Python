@@ -1,0 +1,22 @@
+= Demo chapter
+
+A throwaway chapter, used only to test the uv chapter harness.
+
+First, a file:
+
+[role="sourcecode"]
+.hello.py
+====
+[source,python]
+----
+print("Hello, uv")
+----
+====
+
+Now run it:
+
+[subs="specialcharacters,quotes"]
+----
+$ *uv run python hello.py*
+Hello, uv
+----
