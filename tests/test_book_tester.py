@@ -2,7 +2,9 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from textwrap import dedent
 from unittest.mock import Mock
 
@@ -12,6 +14,7 @@ from book_parser import (
     Command,
     Output,
 )
+from uv_chapter_test import UvChapterTest
 from book_tester import (
     JASMINE_RUNNER,
     ChapterTest,
@@ -124,8 +127,26 @@ class RunCommandTest(ChapterTest):
             self.run_command("foo")
 
 
-class GetListingsTest(ChapterTest):
-    chapter_name = "chapter_01"
+class GetListingsTest(UvChapterTest):
+    # The Django-era text of chapter 1, kept as a fixture: the real chapter 1
+    # has been ported, but this test is about parsing that kind of listing.
+    chapter_name = "chapter_django_first_test"
+
+    def setUp(self):
+        super().setUp()
+        self.book_dir = Path(tempfile.mkdtemp())
+        subprocess.run(
+            [
+                "asciidoctor",
+                "-a",
+                "!example-caption",
+                "-D",
+                str(self.book_dir),
+                str(Path(__file__).parent / "fixtures" / f"{self.chapter_name}.asciidoc"),
+            ],
+            check=True,
+            capture_output=True,
+        )
 
     def test_get_listings_gets_exampleblock_code_listings_and_regular_listings(self):
         self.parse_listings()
